@@ -86,7 +86,7 @@ class HtmlEditorState extends State<HtmlEditor> {
   _injectSummerNote() async {
     var insertConfigString = '';
     widget.insertConfig.forEach((element) {
-      if(element.toLowerCase() == "image"){
+      if(element.toLowerCase() == "picture"){
         setState(() {
           usingImage = true;
         });
@@ -196,35 +196,7 @@ class HtmlEditorState extends State<HtmlEditor> {
                       left: 4.0, right: 4, bottom: 8, top: 2),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: <Widget>[
-                      (usingImage)?widgetIcon(Icons.image, "Image", onKlik: () {
-                        widget.useBottomSheet
-                            ? bottomSheetPickImage(context)
-                            : dialogPickImage(context);
-                      }):Container(),
-                      widgetIcon(Icons.content_copy, "Copy", onKlik: () async {
-                        String data = await getText();
-                        Clipboard.setData(new ClipboardData(text: data));
-                      }),
-                      widgetIcon(Icons.content_paste, "Paste",
-                          onKlik: () async {
-                        ClipboardData data =
-                            await Clipboard.getData(Clipboard.kTextPlain);
-
-                        String txtIsi = data.text
-                            .replaceAll("'", '\\"')
-                            .replaceAll('"', '\\"')
-                            .replaceAll("[", "\\[")
-                            .replaceAll("]", "\\]")
-                            .replaceAll("\n", "<br/>")
-                            .replaceAll("\n\n", "<br/>")
-                            .replaceAll("\r", " ")
-                            .replaceAll('\r\n', " ");
-                        String txt =
-                            "\$('.note-editable').append( '" + txtIsi + "');";
-                        _controller.evaluateJavascript(txt);
-                      }),
-                    ],
+                    children: _getBottomToolbar(),
                   ),
                 )
               : Container(
@@ -233,6 +205,44 @@ class HtmlEditorState extends State<HtmlEditor> {
         ],
       ),
     );
+  }
+
+  List<Widget> _getBottomToolbar(){
+    List<Widget> _bottomToolbar = [
+      widgetIcon(Icons.content_copy, "Copy", onKlik: () async {
+        String data = await getText();
+        Clipboard.setData(new ClipboardData(text: data));
+      }),
+      widgetIcon(Icons.content_paste, "Paste",
+          onKlik: () async {
+            ClipboardData data =
+            await Clipboard.getData(Clipboard.kTextPlain);
+
+            String txtIsi = data.text
+                .replaceAll("'", '\\"')
+                .replaceAll('"', '\\"')
+                .replaceAll("[", "\\[")
+                .replaceAll("]", "\\]")
+                .replaceAll("\n", "<br/>")
+                .replaceAll("\n\n", "<br/>")
+                .replaceAll("\r", " ")
+                .replaceAll('\r\n', " ");
+            String txt =
+                "\$('.note-editable').append( '" + txtIsi + "');";
+            _controller.evaluateJavascript(txt);
+          }),
+    ];
+    if(usingImage){
+      _bottomToolbar.add(
+          widgetIcon(Icons.image, "Image", onKlik: () {
+            widget.useBottomSheet
+                ? bottomSheetPickImage(context)
+                : dialogPickImage(context);
+          })
+      );
+    }
+
+    return _bottomToolbar;
   }
 
   JavascriptChannel getTextJavascriptChannel(BuildContext context) {
