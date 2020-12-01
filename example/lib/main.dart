@@ -53,6 +53,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 //value: "text content initial, if any",
                 key: keyEditor,
                 height: 400,
+                insertConfig: ['link', 'picture', 'video'],
               ),
               Padding(
                 padding: const EdgeInsets.all(8.0),
