@@ -27,6 +27,7 @@ class HtmlEditor extends StatefulWidget {
   final String widthImage;
   final bool showBottomToolbar;
   final String hint;
+  final List<String> insertConfig;
 
   HtmlEditor(
       {Key key,
@@ -36,6 +37,7 @@ class HtmlEditor extends StatefulWidget {
       this.useBottomSheet = true,
       this.widthImage = "100%",
       this.showBottomToolbar = true,
+        this.insertConfig = const ['link', 'picture', 'hr', 'video'],
       this.hint})
       : super(key: key);
 
@@ -47,7 +49,7 @@ class HtmlEditorState extends State<HtmlEditor> {
   WebViewController _controller;
   String text = "";
   final Key _mapKey = UniqueKey();
-
+  bool usingImage = false;
   int port = 5321;
   LocalServer localServer;
 
@@ -62,6 +64,53 @@ class HtmlEditorState extends State<HtmlEditor> {
   initServer() {
     localServer = LocalServer(port);
     localServer.start(handleRequest);
+  }
+
+
+  _loadHtmlFromAssets() async {
+    final filePath = 'packages/html_editor/summernote/summernote.html';
+    await _controller.loadUrl("http://localhost:$port/$filePath");
+    await Future.delayed(Duration(seconds: 1));
+    await _injectSummerNote();
+  }
+  _loadHtmlAndroid(String filename) async{
+    final filename =
+        'packages/html_editor/summernote/summernote.html';
+    await _controller.loadUrl(
+        "file:///android_asset/flutter_assets/" + filename);
+    //make sure html loaded
+    await Future.delayed(Duration(seconds: 1));
+    await _injectSummerNote();
+  }
+
+  _injectSummerNote() async {
+    var insertConfigString = '';
+    widget.insertConfig.forEach((element) {
+      if(element.toLowerCase() == "picture"){
+        setState(() {
+          usingImage = true;
+        });
+      }
+      insertConfigString = "'$element',";
+    });
+    insertConfigString = "[$insertConfigString]";
+    print(insertConfigString);
+    await  _controller.evaluateJavascript(''' 
+        \$('#summernote-2').summernote({
+        placeholder: "&nbsp;",
+        tabsize: 2,
+        toolbar: [
+          ['style', ['style']],
+          ['font', ['bold', 'underline', 'italic']],
+          ['color', ['color']],
+          ['para', ['ul', 'ol', 'paragraph']],
+          ['insert', $insertConfigString],
+          ['view', ['codeview']]
+        ],
+        disableGrammar: false,
+        spellCheck: false
+      });
+    ''');
   }
 
   void handleRequest(HttpRequest request) {
@@ -83,11 +132,6 @@ class HtmlEditorState extends State<HtmlEditor> {
       localServer.close();
     }
     super.dispose();
-  }
-
-  _loadHtmlFromAssets() async {
-    final filePath = 'packages/html_editor/summernote/summernote.html';
-    _controller.loadUrl("http://localhost:$port/$filePath");
   }
 
   @override
@@ -113,8 +157,7 @@ class HtmlEditorState extends State<HtmlEditor> {
                 if (Platform.isAndroid) {
                   final filename =
                       'packages/html_editor/summernote/summernote.html';
-                  _controller.loadUrl(
-                      "file:///android_asset/flutter_assets/" + filename);
+                 _loadHtmlAndroid(filename);
                 } else {
                   _loadHtmlFromAssets();
                 }
@@ -153,35 +196,7 @@ class HtmlEditorState extends State<HtmlEditor> {
                       left: 4.0, right: 4, bottom: 8, top: 2),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: <Widget>[
-                      widgetIcon(Icons.image, "Image", onKlik: () {
-                        widget.useBottomSheet
-                            ? bottomSheetPickImage(context)
-                            : dialogPickImage(context);
-                      }),
-                      widgetIcon(Icons.content_copy, "Copy", onKlik: () async {
-                        String data = await getText();
-                        Clipboard.setData(new ClipboardData(text: data));
-                      }),
-                      widgetIcon(Icons.content_paste, "Paste",
-                          onKlik: () async {
-                        ClipboardData data =
-                            await Clipboard.getData(Clipboard.kTextPlain);
-
-                        String txtIsi = data.text
-                            .replaceAll("'", '\\"')
-                            .replaceAll('"', '\\"')
-                            .replaceAll("[", "\\[")
-                            .replaceAll("]", "\\]")
-                            .replaceAll("\n", "<br/>")
-                            .replaceAll("\n\n", "<br/>")
-                            .replaceAll("\r", " ")
-                            .replaceAll('\r\n', " ");
-                        String txt =
-                            "\$('.note-editable').append( '" + txtIsi + "');";
-                        _controller.evaluateJavascript(txt);
-                      }),
-                    ],
+                    children: _getBottomToolbar(),
                   ),
                 )
               : Container(
@@ -190,6 +205,44 @@ class HtmlEditorState extends State<HtmlEditor> {
         ],
       ),
     );
+  }
+
+  List<Widget> _getBottomToolbar(){
+    List<Widget> _bottomToolbar = [
+      widgetIcon(Icons.content_copy, "Copy", onKlik: () async {
+        String data = await getText();
+        Clipboard.setData(new ClipboardData(text: data));
+      }),
+      widgetIcon(Icons.content_paste, "Paste",
+          onKlik: () async {
+            ClipboardData data =
+            await Clipboard.getData(Clipboard.kTextPlain);
+
+            String txtIsi = data.text
+                .replaceAll("'", '\\"')
+                .replaceAll('"', '\\"')
+                .replaceAll("[", "\\[")
+                .replaceAll("]", "\\]")
+                .replaceAll("\n", "<br/>")
+                .replaceAll("\n\n", "<br/>")
+                .replaceAll("\r", " ")
+                .replaceAll('\r\n', " ");
+            String txt =
+                "\$('.note-editable').append( '" + txtIsi + "');";
+            _controller.evaluateJavascript(txt);
+          }),
+    ];
+    if(usingImage){
+      _bottomToolbar.add(
+          widgetIcon(Icons.image, "Image", onKlik: () {
+            widget.useBottomSheet
+                ? bottomSheetPickImage(context)
+                : dialogPickImage(context);
+          })
+      );
+    }
+
+    return _bottomToolbar;
   }
 
   JavascriptChannel getTextJavascriptChannel(BuildContext context) {
@@ -234,15 +287,15 @@ class HtmlEditorState extends State<HtmlEditor> {
 
   setFullContainer() {
     _controller.evaluateJavascript(
-        '\$("#summernote").summernote("fullscreen.toggle");');
+        '\$("#summernote-2").summernote("fullscreen.toggle");');
   }
 
   setFocus() {
-    _controller.evaluateJavascript("\$('#summernote').summernote('focus');");
+    _controller.evaluateJavascript("\$('#summernote-2').summernote('focus');");
   }
 
   setEmpty() {
-    _controller.evaluateJavascript("\$('#summernote').summernote('reset');");
+    _controller.evaluateJavascript("\$('#summernote-2').summernote('reset');");
   }
 
   setHint(String text) {

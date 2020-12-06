@@ -169,7 +169,8 @@ packages:
       name: webview_flutter
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "1.0.7"
+    version: "0.3.21"
 sdks:
   dart: ">=2.10.0-110 <2.11.0"
-  flutter: ">=1.22.0 <2.0.0"
+  flutter: ">=1.12.13+hotfix.5 <2.0.0"
+
