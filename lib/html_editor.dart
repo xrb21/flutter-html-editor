@@ -211,7 +211,7 @@ class HtmlEditorState extends State<HtmlEditor> {
 
   Future<String> getText() async {
     await _controller.evaluateJavascript(
-        "GetTextSummernote.postMessage(document.getElementsByClassName('note-editable')[0].innerHTML);");
+        "setTimeout(function(){GetTextSummernote.postMessage(document.getElementsByClassName('note-editable')[0].innerHTML)}, 0);");
     return text;
   }
 
@@ -247,7 +247,7 @@ class HtmlEditorState extends State<HtmlEditor> {
 
   setHint(String text) {
     String hint = '\$(".note-placeholder").html("$text");';
-    _controller.evaluateJavascript(hint);
+    _controller.evaluateJavascript("setTimeout(function(){$hint}, 0);");
   }
 
   Widget widgetIcon(IconData icon, String title, {OnClik onKlik}) {
